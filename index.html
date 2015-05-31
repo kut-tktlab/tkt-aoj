@@ -1,8 +1,54 @@
 <html>
-  <head>
-    <title>AOJ Scoreboard of Takata Lab</title>
-  </head>
-  <body>
-    Hello, World.
-  </body>
+<head>
+<title>AOJ Scoreboard for Takata Lab</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script>
+// cf. http://www.ezgate-mt.sakura.ne.jp/jquery/109.html
+
+var userList = [
+  'ytakata'
+];
+
+$(function () {
+  loadAllUsers();
+});
+
+function loadAllUsers() {
+  for (var i = 0; i < userList.length; i++) {
+    loadUserData(userList[i]);
+  }
+}
+
+function loadUserData(user) {
+  var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge/webservice/user?id=';
+  $.ajax({
+    url: aojurl + user,
+    type: 'GET',
+    dataType: 'xml',
+    timeout: 1000,
+    success: parseUserData
+  });
+}
+
+function parseUserData(xml, status) {
+  if (status != 'success') { return; }
+
+  var user = $(xml).children('user');
+  var status = user.children('status');
+  var solved = user.children('solved_list');
+
+  $('<tr>' +
+      '<td>' + user.children('id').text() + '</td>' +
+      '<td>' + status.children('solved').text() + '</td>' +
+    '</tr>').appendTo('table.scoreboard tbody');
+}
+</script>
+</head>
+<body>
+  <h1>AOJ Scoretable</h1>
+  <table class="scoreboard">
+  <tbody>
+  </tbody>
+  </table>
+</body>
 </html>
