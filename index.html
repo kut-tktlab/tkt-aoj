@@ -45,23 +45,26 @@ function parseUserData(xml, status) {
   var solved = user.children('solved_list');
   
   var last = null;
-  solved.children('problem').each(function () {
-    if (last == null ||
-        Number(last.children('submissiondate').text())
-      < Number($(this).children('submissiondate').text()))
-    {
-      last = $(this);
-    }
-  });
+  if (solved != null) {
+    solved.children('problem').each(function () {
+      if (last == null ||
+          Number(last.children('submissiondate').text())
+        < Number($(this).children('submissiondate').text()))
+      {
+        last = $(this);
+      }
+    });
+  }
 
   $('<tr>' +
       '<td>' + printUser(user.children('id').text()) + '</td>' +
       '<td ' + printGraph(status.children('solved').text()) + '</td>' +
       '<td>' +
+         (last == null ? '' :
          '(' + printProblem(last.children('id').text()) +
          ' ' + last.children('language').text() +
          ' ' + printDate(last.children('submissiondate').text()) +
-         ')' +
+         ')') +
       '</td>' +
     '</tr>').appendTo('table.scoreboard tbody');
 }
