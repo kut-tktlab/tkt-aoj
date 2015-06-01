@@ -3,12 +3,17 @@
 <title>AOJ Scoreboard for Takata Lab</title>
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
 <script>
-// cf. http://www.ezgate-mt.sakura.ne.jp/jquery/109.html
+// The following code is partly cited from:
+// http://www.ezgate-mt.sakura.ne.jp/jquery/109.html
 
 var userList = [
-  'ytakata'
+  'shioshiota',  // a sample user of AOJ
+  'ytakata',
 ];
 
+var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge';
+
+// bootstrap
 $(function () {
   loadAllUsers();
 });
@@ -19,10 +24,12 @@ function loadAllUsers() {
   }
 }
 
+// Load the data of one user via the AOJ API.
+// AOJ API is documented at: http://judge.u-aizu.ac.jp/onlinejudge/api.jsp
 function loadUserData(user) {
-  var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge/webservice/user?id=';
+  var aojapiurl = aojurl + '/webservice/user?id=';
   $.ajax({
-    url: aojurl + user,
+    url: aojapiurl + user,
     type: 'GET',
     dataType: 'xml',
     timeout: 1000,
@@ -36,19 +43,92 @@ function parseUserData(xml, status) {
   var user = $(xml).children('user');
   var status = user.children('status');
   var solved = user.children('solved_list');
+  
+  var last = null;
+  solved.children('problem').each(function () {
+    if (last == null ||
+        Number(last.children('submissiondate').text())
+      < Number($(this).children('submissiondate').text()))
+    {
+      last = $(this);
+    }
+  });
 
   $('<tr>' +
-      '<td>' + user.children('id').text() + '</td>' +
-      '<td>' + status.children('solved').text() + '</td>' +
+      '<td>' + printUser(user.children('id').text()) + '</td>' +
+      '<td ' + printGraph(status.children('solved').text()) + '</td>' +
+      '<td>' +
+         '(' + printProblem(last.children('id').text()) +
+         ' ' + last.children('language').text() +
+         ' ' + printDate(last.children('submissiondate').text()) +
+         ')' +
+      '</td>' +
     '</tr>').appendTo('table.scoreboard tbody');
 }
+
+// Display a horizontal bar graph using CSS border-left.
+function printGraph(nSolved) {
+  return ' style="' +
+           'border-left: solid ' + nSolved + 'px #4bf;' +
+           'padding-left: 5px;' +
+         '" class="graph">' + nSolved;
+}
+
+function printUser(id) {
+  var aojuserurl = aojurl + '/user.jsp?id=' + id + '#1';
+  return '<a href="' + aojuserurl + '">' + id + '</a>';
+}
+
+function printProblem(id) {
+  var aojproburl = aojurl + '/description.jsp?id=' + id;
+  return '<a href="' + aojproburl + '">#' + id + '</a>';
+}
+
+function printDate(time) {
+  var d = new Date(Number(time));
+  return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() +
+         ' ' + d.getHours() + ':' + d.getMinutes();
+}
 </script>
+<style type="text/css">
+  table.scoreboard tr th {
+    text-align: left;
+    background: #eee;
+  }
+  table.scoreboard tr td#graph {
+    padding-right: 5px;
+  }
+</style>
 </head>
 <body>
-  <h1>AOJ Scoretable</h1>
+  <h1>AOJ Scoreboard</h1>
+  <h2># of solved problems</h2>
   <table class="scoreboard">
   <tbody>
+  <tr>
+    <th>id</th>
+    <th>solved</th>
+    <th>last problem, language, and date</th>
+  </tr>
   </tbody>
   </table>
+
+  <h2>Links</h2>
+  <ul>
+    <li><a href="http://judge.u-aizu.ac.jp/onlinejudge/index.jsp"
+           >AOJ: Aizu Online Judge</a>
+      <ul>
+        <li><a href="http://judge.u-aizu.ac.jp/onlinejudge/api.jsp"
+               >Application Program Interface</a>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Note</h2>
+  The source code of this Web site is hosted by GitHub.
+  Please contact ytakata for becoming a contributer.<br />
+  Repository URL: <code>https://github.com/ytakata69/tkt-aoj.git</code><br />
+  When you push a change to the above repository,
+  it will be automatically deployed on the Azure Websites.
 </body>
 </html>
