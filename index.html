@@ -15,11 +15,13 @@ var userList = [
   'takasyou',
 ];
 
+var completed = 0;
 var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge';
 
 // bootstrap
 $(function () {
   loadAllUsers();
+  $('table.scoreboard').hide();
 });
 
 function loadAllUsers() {
@@ -71,6 +73,21 @@ function parseUserData(xml, status) {
          ')') +
       '</td>' +
     '</tr>').appendTo('table.scoreboard tbody');
+
+  completed++;
+  if (userList.length == completed) { 
+    $('table.scoreboard tbody').html(
+      $('table.scoreboard tr').sort(function(a, b) {
+        return parseInt($(a).find('.graph').text()) > parseInt($(b).find('.graph').text()) ? -1 : 1;
+      })
+    );
+    $('<tr>' +
+        '<th>id</th>' +
+        '<th>solved</th>' +
+        '<th>last problem, language, and date</th>' +
+      '</tr>').prependTo('table.scoreboard tbody');
+    $('table.scoreboard').show();
+  }
 }
 
 // Display a horizontal bar graph using CSS border-left.
@@ -112,11 +129,6 @@ function printDate(time) {
   <h2># of solved problems</h2>
   <table class="scoreboard">
   <tbody>
-  <tr>
-    <th>id</th>
-    <th>solved</th>
-    <th>last problem, language, and date</th>
-  </tr>
   </tbody>
   </table>
 
