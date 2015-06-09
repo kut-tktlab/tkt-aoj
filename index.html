@@ -14,14 +14,13 @@ var userList = [
   'fuka88k',
   'takasyou',
 ];
-
-var completed = 0;
+var userDataList = [];
 var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge';
 
 // bootstrap
 $(function () {
-  loadAllUsers();
   $('table.scoreboard').hide();
+  loadAllUsers();
 });
 
 function loadAllUsers() {
@@ -61,31 +60,30 @@ function parseUserData(xml, status) {
       }
     });
   }
+  userDataList.push({
+    id: user.children('id').text(),
+    solved: status.children('solved').text(),
+    last: last == null ? null : {
+      id: last.children('id').text(),
+      language: last.children('language').text(),
+      submissiondate: last.children('submissiondate').text()
+    }
+  });
 
-  $('<tr>' +
-      '<td>' + printUser(user.children('id').text()) + '</td>' +
-      '<td ' + printGraph(status.children('solved').text()) + '</td>' +
-      '<td>' +
-         (last == null ? '' :
-         '(' + printProblem(last.children('id').text()) +
-         ' ' + last.children('language').text() +
-         ' ' + printDate(last.children('submissiondate').text()) +
-         ')') +
-      '</td>' +
-    '</tr>').appendTo('table.scoreboard tbody');
-
-  completed++;
-  if (userList.length == completed) { 
-    $('table.scoreboard tbody').html(
-      $('table.scoreboard tr').sort(function(a, b) {
-        return parseInt($(a).find('.graph').text()) > parseInt($(b).find('.graph').text()) ? -1 : 1;
-      })
-    );
-    $('<tr>' +
-        '<th>id</th>' +
-        '<th>solved</th>' +
-        '<th>last problem, language, and date</th>' +
-      '</tr>').prependTo('table.scoreboard tbody');
+  if (userDataList.length == userList.length) {
+    userDataList.sort(function(a, b) { return b.solved - a.solved; });
+    userDataList.forEach(function(user) {
+      $('<tr>' +
+          '<td>' + printUser(user.id) + '</td>' +
+          '<td ' + printGraph(user.solved) + '</td>' +
+          '<td>' + (user.last == null ? '' :
+            '(' + printProblem(user.last.id) +
+            ' ' + user.last.language +
+            ' ' + printDate(user.last.submissiondate) +
+            ')') +
+          '</td>' +
+        '</tr>').appendTo('table.scoreboard tbody');
+    });
     $('table.scoreboard').show();
   }
 }
@@ -129,6 +127,11 @@ function printDate(time) {
   <h2># of solved problems</h2>
   <table class="scoreboard">
   <tbody>
+    <tr>
+      <th>id</th>
+      <th>solved</th>
+      <th>last problem, language, and date</th>
+    </tr>
   </tbody>
   </table>
 
