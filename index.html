@@ -111,7 +111,7 @@ function printProblem(id) {
 function printDate(time) {
   var d = new Date(Number(time));
   return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() +
-         ' ' + d.getHours() + ':' + d.getMinutes();
+         ' ' + d.getHours() + ':' + ("0" + d.getMinutes()).substr(-2);
 }
 </script>
 <style type="text/css">
