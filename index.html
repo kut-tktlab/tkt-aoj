@@ -17,11 +17,24 @@ var userList = [
   'nt1993',
 ];
 var userDataList = [];
+
 var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge';
+var scoreboards = [
+  '#scoreboard_total_table',
+  '#scoreboard_weekly_table',
+  '#scoreboard_today_table'
+];
+
+var today = new Date();
+var beginDay = today.getTime() -
+   (today.getHours() * 1000 * 60 * 60
+  + today.getMinutes() * 1000 * 60
+  + today.getSeconds() * 1000
+  + today.getMilliseconds());
+var beginWeek = beginDay - today.getDay() * 1000 * 60 * 60 * 24;
 
 // bootstrap
 $(function () {
-  $('table.scoreboard').hide();
   loadAllUsers();
 });
 
@@ -50,43 +63,41 @@ function parseUserData(xml, status) {
   var user = $(xml).children('user');
   var status = user.children('status');
   var solved = user.children('solved_list');
-  
+  var weekly = 0;
+  var today = 0;
+
   var last = null;
   if (solved != null) {
     solved.children('problem').each(function () {
+      var submissiondate = Number($(this).children('submissiondate').text());
       if (last == null ||
-          Number(last.children('submissiondate').text())
-        < Number($(this).children('submissiondate').text()))
+          Number(last.children('submissiondate').text()) < submissiondate)
       {
         last = $(this);
+      }
+      if (beginWeek < submissiondate) {
+        weekly += 1;
+      }
+      if (beginDay < submissiondate) {
+        today += 1;
       }
     });
   }
   userDataList.push({
     id: user.children('id').text(),
-    solved: status.children('solved').text(),
+    total: status.children('solved').text(),
+    weekly: weekly,
+    today: today,
     last: last == null ? null : {
       id: last.children('id').text(),
       language: last.children('language').text(),
       submissiondate: last.children('submissiondate').text()
     }
   });
-
   if (userDataList.length == userList.length) {
-    userDataList.sort(function(a, b) { return b.solved - a.solved; });
-    userDataList.forEach(function(user) {
-      $('<tr>' +
-          '<td>' + printUser(user.id) + '</td>' +
-          '<td ' + printGraph(user.solved) + '</td>' +
-          '<td>' + (user.last == null ? '' :
-            '(' + printProblem(user.last.id) +
-            ' ' + user.last.language +
-            ' ' + printDate(user.last.submissiondate) +
-            ')') +
-          '</td>' +
-        '</tr>').appendTo('table.scoreboard tbody');
-    });
-    $('table.scoreboard').show();
+    printScoreBoard(userDataList, 'total', '#scoreboard_total_table');
+    printScoreBoard(userDataList, 'weekly', '#scoreboard_weekly_table');
+    printScoreBoard(userDataList, 'today', '#scoreboard_today_table');
   }
 }
 
@@ -113,6 +124,33 @@ function printDate(time) {
   return d.getFullYear() + '/' + (d.getMonth() + 1) + '/' + d.getDate() +
          ' ' + d.getHours() + ':' + ("0" + d.getMinutes()).substr(-2);
 }
+
+function printScoreBoard(datalist, target, tableId) {
+  datalist.sort(function(a, b) { return b[target] - a[target]; });
+  datalist.forEach(function(user) {
+    $('<tr>' +
+        '<td>' + printUser(user.id) + '</td>' +
+        '<td ' + printGraph(user[target]) + '</td>' +
+        '<td>' + (user.last == null || (user[target] == 0) ? '' :
+          '(' + printProblem(user.last.id) +
+          ' ' + user.last.language +
+          ' ' + printDate(user.last.submissiondate) +
+          ')') +
+        '</td>' +
+      '</tr>').appendTo(tableId);
+  });
+}
+
+function setTableEnabled(name) {
+  var tables = scoreboards.concat();
+
+  tables.splice(tables.indexOf(name), 1);
+  tables.forEach(function (tbl) {
+    $(tbl).hide();
+  });
+  $(name).show();
+}
+
 </script>
 <style type="text/css">
   table.scoreboard tr th {
@@ -127,7 +165,31 @@ function printDate(time) {
 <body>
   <h1>AOJ Scoreboard</h1>
   <h2># of solved problems</h2>
-  <table class="scoreboard">
+
+  <h3>Total</h3>
+  <table class="scoreboard" id="scoreboard_total_table">
+  <tbody>
+    <tr>
+      <th>id</th>
+      <th>solved</th>
+      <th>last problem, language, and date</th>
+    </tr>
+  </tbody>
+  </table>
+
+  <h3>This week</h3>
+  <table class="scoreboard" id="scoreboard_weekly_table">
+  <tbody>
+    <tr>
+      <th>id</th>
+      <th>solved</th>
+      <th>last problem, language, and date</th>
+    </tr>
+  </tbody>
+  </table>
+
+  <h3>Today</h3>
+  <table class="scoreboard" id="scoreboard_today_table">
   <tbody>
     <tr>
       <th>id</th>
