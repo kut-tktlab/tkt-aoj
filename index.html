@@ -16,89 +16,80 @@ var userList = [
   'nosan',
   'nt1993',
 ];
-var userDataList = [];
-
+var userDatas = [];
+var problemTitles = {};
 var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge';
-var scoreboards = [
-  '#scoreboard_total_table',
-  '#scoreboard_weekly_table',
-  '#scoreboard_today_table'
-];
-
-var today = new Date();
-var beginDay = today.getTime() -
-   (today.getHours() * 1000 * 60 * 60
-  + today.getMinutes() * 1000 * 60
-  + today.getSeconds() * 1000
-  + today.getMilliseconds());
-var beginWeek = beginDay - today.getDay() * 1000 * 60 * 60 * 24;
+var aojapi = aojurl + '/webservice/';
+var now = new Date();
+var beginDay = now.getTime() - (
+  ((now.getHours() * 60
+  + now.getMinutes()) * 60
+  + now.getSeconds()) * 1000
+  + now.getMilliseconds());
+var beginWeek = beginDay - now.getDay() * 1000 * 60 * 60 * 24;
 
 // bootstrap
 $(function () {
   loadAllUsers();
 });
 
-function loadAllUsers() {
-  for (var i = 0; i < userList.length; i++) {
-    loadUserData(userList[i]);
-  }
-}
-
 // Load the data of one user via the AOJ API.
 // AOJ API is documented at: http://judge.u-aizu.ac.jp/onlinejudge/api.jsp
-function loadUserData(user) {
-  var aojapiurl = aojurl + '/webservice/user?id=';
-  $.ajax({
-    url: aojapiurl + user,
-    type: 'GET',
-    dataType: 'xml',
-    timeout: 1000,
-    success: parseUserData
+function loadAllUsers() {
+  var deferreds = [];
+  userList.forEach(function(user) {
+    deferreds.push($.get(aojapi + 'user?id=' + user).then(parseUserData));
+  });
+
+  $.when.apply($, deferreds)
+    .done(function() {
+      printScoreBoard('total', '#scoreboard_total_table');
+      printScoreBoard('weekly', '#scoreboard_weekly_table');
+      printScoreBoard('today', '#scoreboard_today_table');
   });
 }
 
-function parseUserData(xml, status) {
-  if (status != 'success') { return; }
-
-  var user = $(xml).children('user');
-  var status = user.children('status');
-  var solved = user.children('solved_list');
-  var weekly = 0;
-  var today = 0;
-
-  var last = null;
-  if (solved != null) {
-    solved.children('problem').each(function () {
-      var submissiondate = Number($(this).children('submissiondate').text());
-      if (last == null ||
-          Number(last.children('submissiondate').text()) < submissiondate)
-      {
-        last = $(this);
-      }
-      if (beginWeek < submissiondate) {
-        weekly += 1;
-      }
-      if (beginDay < submissiondate) {
-        today += 1;
-      }
-    });
-  }
-  userDataList.push({
-    id: user.children('id').text(),
-    total: status.children('solved').text(),
-    weekly: weekly,
-    today: today,
-    last: last == null ? null : {
-      id: last.children('id').text(),
-      language: last.children('language').text(),
-      submissiondate: last.children('submissiondate').text()
-    }
+function loadProblemData(problem) {
+  return $.get(aojapi + 'problem?id=' + problem + '&status=false')
+    .done(function(xml) {
+      problemTitles[problem] = $(xml).find('name').text().trim();
   });
-  if (userDataList.length == userList.length) {
-    printScoreBoard(userDataList, 'total', '#scoreboard_total_table');
-    printScoreBoard(userDataList, 'weekly', '#scoreboard_weekly_table');
-    printScoreBoard(userDataList, 'today', '#scoreboard_today_table');
+}
+
+function parseUserData(xml) {
+  var nextProc = null;
+  var userData = {
+    id: $(xml).find('user > id').text(),
+    total: 0, weekly: 0, today: 0,
+    last: null
+  };
+
+  $(xml).find('user > solved_list > problem').each(function () {
+    var submissiondate = Number($(this).children('submissiondate').text());
+    if (userData.last == null ||
+        Number(userData.last.children('submissiondate').text()) < submissiondate)
+    {
+      userData.last = $(this);
+    }
+    if (beginWeek < submissiondate) {
+      userData.weekly += 1;
+    }
+    if (beginDay < submissiondate) {
+      userData.today += 1;
+    }
+    userData.total += 1;
+  });
+
+  if (userData.last != null) {
+    userData.last = {
+      id: userData.last.children('id').text().trim(),
+      language: userData.last.children('language').text(),
+      submissiondate: userData.last.children('submissiondate').text()
+    };
+    nextProc = loadProblemData(userData.last.id);
   }
+  userDatas.push(userData);
+  return nextProc;
 }
 
 // Display a horizontal bar graph using CSS border-left.
@@ -116,7 +107,7 @@ function printUser(id) {
 
 function printProblem(id) {
   var aojproburl = aojurl + '/description.jsp?id=' + id;
-  return '<a href="' + aojproburl + '">#' + id + '</a>';
+  return '<a href="' + aojproburl + '">#' + id + ': ' + problemTitles[id] + '</a>';
 }
 
 function printDate(time) {
@@ -125,13 +116,13 @@ function printDate(time) {
          ' ' + d.getHours() + ':' + ("0" + d.getMinutes()).substr(-2);
 }
 
-function printScoreBoard(datalist, target, tableId) {
-  datalist.sort(function(a, b) { return b[target] - a[target]; });
-  datalist.forEach(function(user) {
+function printScoreBoard(sortedBy, tableId) {
+  userDatas.sort(function(a, b) { return b[sortedBy] - a[sortedBy]; });
+  userDatas.forEach(function(user) {
     $('<tr>' +
         '<td>' + printUser(user.id) + '</td>' +
-        '<td ' + printGraph(user[target]) + '</td>' +
-        '<td>' + (user.last == null || (user[target] == 0) ? '' :
+        '<td ' + printGraph(user[sortedBy]) + '</td>' +
+        '<td>' + (user[sortedBy] == 0 ? '' :
           '(' + printProblem(user.last.id) +
           ' ' + user.last.language +
           ' ' + printDate(user.last.submissiondate) +
@@ -139,16 +130,6 @@ function printScoreBoard(datalist, target, tableId) {
         '</td>' +
       '</tr>').appendTo(tableId);
   });
-}
-
-function setTableEnabled(name) {
-  var tables = scoreboards.concat();
-
-  tables.splice(tables.indexOf(name), 1);
-  tables.forEach(function (tbl) {
-    $(tbl).hide();
-  });
-  $(name).show();
 }
 
 </script>
