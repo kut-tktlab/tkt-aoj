@@ -31,10 +31,11 @@ var beginDay = now.getTime() - (
   + now.getMinutes()) * 60
   + now.getSeconds()) * 1000
   + now.getMilliseconds());
-var beginWeek = beginDay - now.getDay() * 1000 * 60 * 60 * 24;
+var beginWeek = beginDay - now.getDay() * 1000 * 3600 * 24;
 
 // bootstrap
 $(function () {
+  loadProblemDataFromCookie();
   loadAllUsers();
 });
 
@@ -45,13 +46,24 @@ function loadAllUsers() {
   userList.forEach(function(user) {
     deferreds.push($.get(aojapi + 'user?id=' + user).then(parseUserData));
   });
-
   $.when.apply($, deferreds)
     .done(function() {
       printScoreBoard('total', '#scoreboard_total_table');
       printScoreBoard('weekly', '#scoreboard_weekly_table');
       printScoreBoard('today', '#scoreboard_today_table');
+      saveProblemDataToCookie();
   });
+}
+
+function loadProblemDataFromCookie() {
+  if (navigator.cookieEnabled) {
+    document.cookie.split('; ').forEach(function (e) {
+      e = e.split('=');
+      if (/\d+/.test(e[0])) {
+        problemTitles[e[0]] = unescape(e[1]);
+      }
+    });
+  }
 }
 
 function loadProblemData(problem) {
@@ -59,6 +71,19 @@ function loadProblemData(problem) {
     .done(function(xml) {
       problemTitles[problem] = $(xml).find('name').text().trim();
   });
+}
+
+function saveProblemDataToCookie() {
+  if (navigator.cookieEnabled) {
+    document.cookie =
+      'expire=' + new Date(now + 1000 * 3600 * 24 * 30).toUTCString();
+    for (var key in problemTitles) {
+      var used = userDatas.find(function (userData) {
+        return userData.last != null && userData.last.id == key
+      });
+      if (used) document.cookie = key + '=' + escape(problemTitles[key]);
+    }
+  }
 }
 
 function parseUserData(xml) {
@@ -91,7 +116,9 @@ function parseUserData(xml) {
       language: userData.last.children('language').text(),
       submissiondate: userData.last.children('submissiondate').text()
     };
-    nextProc = loadProblemData(userData.last.id);
+    if (!(userData.last.id in problemTitles)) {
+      nextProc = loadProblemData(userData.last.id);
+    }
   }
   userDatas.push(userData);
   return nextProc;
