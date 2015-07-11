@@ -78,8 +78,8 @@ function saveProblemDataToCookie() {
     document.cookie =
       'expire=' + new Date(now + 1000 * 3600 * 24 * 30).toUTCString();
     for (var key in problemTitles) {
-      var used = userDatas.find(function (userData) {
-        return userData.last != null && userData.last.id == key
+      var used = !userDatas.every(function (userData) {
+        return !(userData.last != null && userData.last.id == key);
       });
       if (used) document.cookie = key + '=' + escape(problemTitles[key]);
     }
