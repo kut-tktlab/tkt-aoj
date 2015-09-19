@@ -23,6 +23,7 @@ var userList = [
 ];
 var userDatas = [];
 var problemTitles = {};
+var solvedProblems = {};
 var aojurl = 'http://judge.u-aizu.ac.jp/onlinejudge';
 var aojapi = aojurl + '/webservice/';
 var now = new Date();
@@ -51,6 +52,7 @@ function loadAllUsers() {
       printScoreBoard('total', '#scoreboard_total_table');
       printScoreBoard('weekly', '#scoreboard_weekly_table');
       printScoreBoard('today', '#scoreboard_today_table');
+      printSolvedProblems();
       saveProblemDataToCookie();
   });
 }
@@ -108,6 +110,10 @@ function parseUserData(xml) {
       userData.today += 1;
     }
     userData.total += 1;
+
+    var pid = $(this).children('id').text();
+    if (solvedProblems[pid] == null) { solvedProblems[pid] = []; }
+    solvedProblems[pid].push(userData.id.substring(0, 2));
   });
 
   if (userData.last != null) {
@@ -139,7 +145,9 @@ function printUser(id) {
 
 function printProblem(id) {
   var aojproburl = aojurl + '/description.jsp?id=' + id;
-  return '<a href="' + aojproburl + '">#' + id + ': ' + problemTitles[id] + '</a>';
+  var title = problemTitles[id];
+  if (title == null) { title = ''; }
+  return '<a href="' + aojproburl + '">#' + id + ': ' + title + '</a>';
 }
 
 function printDate(time) {
@@ -164,6 +172,22 @@ function printScoreBoard(sortedBy, tableId) {
   });
 }
 
+function printSolvedProblems() {
+  var i = 0;
+  var keys = [];
+  for (var key in solvedProblems) { keys.push(key); }
+  keys.sort();
+  keys.forEach(function(id) {
+    solvedProblems[id].sort();
+    i++;
+    $('<tr>' +
+        '<td>' + i + '</td>' +
+        '<td>' + printProblem(id) + '</td>' +
+        '<td>' + solvedProblems[id].join(' ') + '</td>' +
+        '<td>' + solvedProblems[id].length + '</td>' +
+      '</tr>').appendTo('#solved_problem_table');
+  });
+}
 </script>
 <style type="text/css">
   table.scoreboard tr th {
@@ -236,5 +260,18 @@ function printScoreBoard(sortedBy, tableId) {
   >https://github.com/ytakata69/tkt-aoj/</a></code><br />
   When you push a change to the above repository,
   it will be automatically deployed on the Azure Websites.
+
+  <h2>The List of Solved Problems</h2>
+  <table class="scoreboard" id="solved_problem_table">
+  <tbody>
+    <tr>
+      <th></th>
+      <th>problem</th>
+      <th>people who solved it</th>
+      <th></th>
+    </tr>
+  </tbody>
+  </table>
+
 </body>
 </html>
