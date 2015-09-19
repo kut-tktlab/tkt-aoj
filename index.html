@@ -112,8 +112,8 @@ function parseUserData(xml) {
     userData.total += 1;
 
     var pid = $(this).children('id').text();
-    if (solvedProblems[pid] == null) { solvedProblems[pid] = []; }
-    solvedProblems[pid].push(userData.id.substring(0, 2));
+    if (solvedProblems[pid] == null) { solvedProblems[pid] = {}; }
+    solvedProblems[pid][userData.id] = 1;
   });
 
   if (userData.last != null) {
@@ -173,18 +173,28 @@ function printScoreBoard(sortedBy, tableId) {
 }
 
 function printSolvedProblems() {
+  $('#solver_col').attr('colSpan', userList.length);
+  var uList = $.extend(true, [], userList);
+  uList.sort();
   var i = 0;
   var keys = [];
   for (var key in solvedProblems) { keys.push(key); }
   keys.sort();
   keys.forEach(function(id) {
-    solvedProblems[id].sort();
     i++;
+    var solvers = '';
+    var cnt = 0;
+    uList.forEach(function(usr) {
+      solvers += '<td>' +
+                 (usr in solvedProblems[id] ? usr.substring(0, 2) : '') +
+                 '</td>';
+      cnt +=     (usr in solvedProblems[id] ? 1 : 0);
+    });
     $('<tr>' +
         '<td>' + i + '</td>' +
         '<td>' + printProblem(id) + '</td>' +
-        '<td>' + solvedProblems[id].join(' ') + '</td>' +
-        '<td>' + solvedProblems[id].length + '</td>' +
+                 solvers +
+        '<td>' + cnt + '</td>' +
       '</tr>').appendTo('#solved_problem_table');
   });
 }
@@ -267,7 +277,7 @@ function printSolvedProblems() {
     <tr>
       <th></th>
       <th>problem</th>
-      <th>people who solved it</th>
+      <th id="solver_col">people who solved it</th>
       <th></th>
     </tr>
   </tbody>
