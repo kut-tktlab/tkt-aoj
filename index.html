@@ -175,7 +175,9 @@ function printScoreBoard(sortedBy, tableId) {
 function printSolvedProblems() {
   $('#solver_col').attr('colSpan', userList.length);
   var uList = $.extend(true, [], userList);
-  uList.sort();
+  uList.sort(function(a, b) {
+    return a.toLowerCase().localeCompare(b.toLowerCase());
+  });
   var i = 0;
   var keys = [];
   for (var key in solvedProblems) { keys.push(key); }
@@ -185,12 +187,13 @@ function printSolvedProblems() {
     var solvers = '';
     var cnt = 0;
     uList.forEach(function(usr) {
+      var lusr = usr.substring(0, 2).toLowerCase();
       solvers += '<td>' +
-                 (usr in solvedProblems[id] ? usr.substring(0, 2) : '') +
+                 (usr in solvedProblems[id] ? lusr : '&nbsp;') +
                  '</td>';
       cnt +=     (usr in solvedProblems[id] ? 1 : 0);
     });
-    $('<tr>' +
+    $('<tr' + (i > 1 && i % 5 == 1 ? ' class="overline"' : '') + '>' + 
         '<td>' + i + '</td>' +
         '<td>' + printProblem(id) + '</td>' +
                  solvers +
@@ -206,6 +209,9 @@ function printSolvedProblems() {
   }
   table.scoreboard tr td#graph {
     padding-right: 5px;
+  }
+  table.scoreboard tr.overline td {
+    border-top: 1px #ccc solid;
   }
 </style>
 </head>
